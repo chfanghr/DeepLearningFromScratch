@@ -1,5 +1,7 @@
 from typing import Callable
 from typing import List
+from typing import Tuple
+
 from numpy import ndarray
 
 import numpy as np
@@ -145,17 +147,115 @@ def plot_chain(chain_func: ChainFunction,
         pyplot.show()
 
 
-chain_1 = [square, sigmoid]
-chain_2 = [sigmoid, square]
-chain_3 = [leaky_relu, sigmoid, square]
+def multiple_input_add(x: ndarray,
+                       y: ndarray,
+                       sigma: ArrayFunction) -> ndarray:
+    """
+    Function with multiple inputs and addition, forward pass.
+    """
+    assert x.shape is y.shape
 
-plot_range = np.arange(-3, 3, 0.01)
+    a = x + y
 
-plot_chain(chain_length_2, chain_1, plot_range, False)
-plot_chain_deriv(chain_deriv_2, chain_1, plot_range)
+    return sigma(a)
 
-plot_chain(chain_length_2, chain_2, plot_range, False)
-plot_chain_deriv(chain_deriv_2, chain_2, plot_range)
 
-plot_chain(chain_length_3, chain_3, plot_range, False)
-plot_chain_deriv(chain_deriv_3, chain_3, plot_range)
+def multiple_inputs_add_backward(x: ndarray,
+                                 y: ndarray,
+                                 sigma: ArrayFunction) -> Tuple[ndarray, ndarray]:
+    """
+    Computes the derivative of this simple function with respect to
+    both inputs.
+    """
+    # Compute "forward pass"
+    a = x + y
+
+    # Compute derivatives
+    dsda = deriv(sigma, a)
+
+    dadx, dady = 1, 1
+
+    return dsda * dadx, dsda * dady
+
+
+def matmul_forward(x: ndarray,
+                   w: ndarray) -> ndarray:
+    """
+    Computes the forward pass of a matrix multiplication.
+    """
+
+    assert x.shape[1] is w.shape[0], \
+        """
+    For matrix multiplication, the number of columns in the first array should
+    match the number of rows in the second; instead the number of columns in the
+    first array is {} and the number of rows in the second array is {}.
+    """.format(x.shape[1], w.shape[0])
+
+    # matrix multiplication
+    n = np.dot(x, w)
+
+    return n
+
+
+def matmul_backward_first(x: ndarray, w: ndarray) -> ndarray:
+    """
+    Compute the backward pass of a matrix multiplication with respect to the first argument
+    """
+    # backward pass
+    dndx = np.transpose(w, (1, 0))
+    return dndx
+
+
+def matrix_forward_extra(x: ndarray, w: ndarray, sigma: ArrayFunction) -> ndarray:
+    """
+    Computes the forward pass of a function involving matrix multiplication, one extra function
+    """
+    assert x.shape[1] is w.shape[1]
+
+    # matrix multiplication
+    n = np.dot(x, w)
+    # feeding the output of the matrix multiplication through sigma
+    s = sigma(n)
+    return s
+
+
+def matrix_function_backward_1(x: ndarray, w: ndarray, sigma: ArrayFunction) -> ndarray:
+    """
+    Computes the derivative of matrix function with respect to the first element
+    """
+    assert x.shape[1] is w.shape[1]
+
+    # matrix multiplication
+    n = np.dot(x, w)
+
+    # deeding the output of the matrix multiplication through sigma
+    s = sigma(n)
+
+    # backward calculation
+    dsdn = deriv(sigma, n)
+
+    # dndx
+    dndx = np.transpose(w, (1, 0))
+
+    # multiply them together; since dndx is 1x1 here, order doesn't matter
+    return np.dot(dsdn, dndx)
+
+
+def test() -> None:
+    chain_1 = [square, sigmoid]
+    chain_2 = [sigmoid, square]
+    chain_3 = [leaky_relu, sigmoid, square]
+
+    plot_range = np.arange(-3, 3, 0.01)
+
+    plot_chain(chain_length_2, chain_1, plot_range, False)
+    plot_chain_deriv(chain_deriv_2, chain_1, plot_range)
+
+    plot_chain(chain_length_2, chain_2, plot_range, False)
+    plot_chain_deriv(chain_deriv_2, chain_2, plot_range)
+
+    plot_chain(chain_length_3, chain_3, plot_range, False)
+    plot_chain_deriv(chain_deriv_3, chain_3, plot_range)
+
+
+test()
